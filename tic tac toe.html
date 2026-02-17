@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Ultimate Tic Tac Toe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+    --bg:#f2f2f2;
+    --cell:#ffffff;
+    --text:#222;
+}
+body.dark{
+    --bg:#1e1e1e;
+    --cell:#2c2c2c;
+    --text:#fff;
+}
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    text-align:center;
+}
+h1{margin-top:20px;}
+.controls{
+    margin-top:10px;
+}
+button, select{
+    padding:8px 12px;
+    margin:5px;
+    font-size:16px;
+    cursor:pointer;
+}
+.board{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    max-width:350px;
+    margin:25px auto;
+}
+.cell{
+    background:var(--cell);
+    font-size:40px;
+    height:100px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    cursor:pointer;
+    border-radius:10px;
+    transition:0.2s;
+}
+.cell:hover{
+    transform:scale(1.05);
+}
+#status{
+    font-size:18px;
+    margin-top:10px;
+}
+.scoreboard{
+    margin-top:10px;
+}
+@media(max-width:500px){
+    .cell{height:80px;font-size:32px;}
+}
+</style>
+</head>
+<body>
+
+<h1>❌⭕ Ultimate Tic Tac Toe</h1>
+
+<div class="controls">
+    <select id="mode">
+        <option value="ai">Play vs AI</option>
+        <option value="2p">2 Player</option>
+    </select>
+    <button onclick="toggleTheme()">🌙 Toggle Theme</button>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="resetScores()">Reset Scores</button>
+</div>
+
+<div class="board" id="board"></div>
+
+<div id="status"></div>
+
+<div class="scoreboard">
+    X: <span id="xScore">0</span> |
+    O: <span id="oScore">0</span>
+</div>
+
+<script>
+let board=["","","","","","","","",""];
+let currentPlayer="X";
+let gameActive=true;
+let mode="ai";
+let scores={X:0,O:0};
+
+const winPatterns=[
+[0,1,2],[3,4,5],[6,7,8],
+[0,3,6],[1,4,7],[2,5,8],
+[0,4,8],[2,4,6]
+];
+
+const boardEl=document.getElementById("board");
+const statusEl=document.getElementById("status");
+
+document.getElementById("mode").addEventListener("change",e=>{
+    mode=e.target.value;
+    restartGame();
+});
+
+function createBoard(){
+    boardEl.innerHTML="";
+    board.forEach((cell,i)=>{
+        const div=document.createElement("div");
+        div.classList.add("cell");
+        div.textContent=cell;
+        div.onclick=()=>handleMove(i);
+        boardEl.appendChild(div);
+    });
+    statusEl.textContent=gameActive?`Turn: ${currentPlayer}`:"";
+}
+
+function handleMove(i){
+    if(board[i]!==""||!gameActive)return;
+    board[i]=currentPlayer;
+    if(checkWinner(currentPlayer))return;
+    currentPlayer=currentPlayer==="X"?"O":"X";
+    createBoard();
+
+    if(mode==="ai"&&currentPlayer==="O"&&gameActive){
+        setTimeout(()=>{
+            let bestMove=minimax(board,"O").index;
+            board[bestMove]="O";
+            if(checkWinner("O"))return;
+            currentPlayer="X";
+            createBoard();
+        },400);
+    }
+}
+
+function checkWinner(player){
+    for(let pattern of winPatterns){
+        const[a,b,c]=pattern;
+        if(board[a]===player&&board[b]===player&&board[c]===player){
+            statusEl.textContent=`🎉 ${player} Wins!`;
+            gameActive=false;
+            scores[player]++;
+            updateScores();
+            return true;
+        }
+    }
+    if(!board.includes("")){
+        statusEl.textContent="It's a Draw!";
+        gameActive=false;
+        return true;
+    }
+    return false;
+}
+
+function minimax(newBoard,player){
+    let empty=newBoard.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+
+    if(checkWin(newBoard,"X"))return {score:-10};
+    if(checkWin(newBoard,"O"))return {score:10};
+    if(empty.length===0)return {score:0};
+
+    let moves=[];
+    for(let i of empty){
+        let move={};
+        move.index=i;
+        newBoard[i]=player;
+
+        let result=minimax(newBoard,player==="O"?"X":"O");
+        move.score=result.score;
+
+        newBoard[i]="";
+        moves.push(move);
+    }
+
+    let bestMove;
+    if(player==="O"){
+        let bestScore=-Infinity;
+        for(let i=0;i<moves.length;i++){
+            if(moves[i].score>bestScore){
+                bestScore=moves[i].score;
+                bestMove=i;
+            }
+        }
+    }else{
+        let bestScore=Infinity;
+        for(let i=0;i<moves.length;i++){
+            if(moves[i].score<bestScore){
+                bestScore=moves[i].score;
+                bestMove=i;
+            }
+        }
+    }
+    return moves[bestMove];
+}
+
+function checkWin(b,p){
+    return winPatterns.some(([a,b2,c])=>b[a]===p&&b[b2]===p&&b[c]===p);
+}
+
+function updateScores(){
+    document.getElementById("xScore").textContent=scores.X;
+    document.getElementById("oScore").textContent=scores.O;
+}
+
+function restartGame(){
+    board=["","","","","","","","",""];
+    currentPlayer="X";
+    gameActive=true;
+    createBoard();
+}
+
+function resetScores(){
+    scores={X:0,O:0};
+    updateScores();
+}
+
+function toggleTheme(){
+    document.body.classList.toggle("dark");
+}
+
+createBoard();
+</script>
+
+</body>
+</html>
